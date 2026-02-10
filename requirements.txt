@@ -1,0 +1,6 @@
+streamlit
+pandas
+numpy<2
+pydub
+transformers
+torch
