@@ -171,7 +171,8 @@ if analyze_btn:
                 if i % 2 == 1:
                     continue
 
-                res = predict_emotion(c["chunk"])
+                res = predict_emotion(c["chunk"], c["sr"])
+
 
                 label = res.get("emotion", "neutral")
                 conf = float(res.get("confidence", 0.0))

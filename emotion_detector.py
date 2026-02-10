@@ -6,11 +6,12 @@ from transformers import pipeline
 TARGET_SAMPLE_RATE = 16000
 
 
+# ---------------- MODEL CACHE ----------------
+
 @st.cache_resource
 def load_model():
     """
-    Loads model only once per app lifetime.
-    Cached in memory.
+    Load model only once and keep in RAM.
     """
     return pipeline(
         "audio-classification",
@@ -19,46 +20,36 @@ def load_model():
     )
 
 
-def audiosegment_to_numpy(audio_segment):
+# ---------------- PREDICT ----------------
 
-    samples = np.array(audio_segment.get_array_of_samples())
+def predict_emotion(samples, sr=TARGET_SAMPLE_RATE):
+    """
+    Input: numpy float32 samples
+    Output: emotion + confidence
+    """
 
-    if samples.size == 0:
-        return None
+    try:
+        samples = np.array(samples).astype("float32")
 
-    max_val = float(1 << (8 * audio_segment.sample_width - 1))
+        if samples.size == 0:
+            return {"emotion": "neutral", "confidence": 0.0}
 
-    samples = samples.astype("float32")
+        model = load_model()
 
-    if max_val > 0:
-        samples /= max_val
+        outputs = model(
+            samples,
+            sampling_rate=sr
+        )
 
-    return samples
+        if not outputs:
+            return {"emotion": "neutral", "confidence": 0.0}
 
+        best = max(outputs, key=lambda x: x["score"])
 
-def predict_emotion(audio_segment):
+        return {
+            "emotion": best["label"],
+            "confidence": round(float(best["score"]), 3)
+        }
 
-    # convert audio
-    samples = audiosegment_to_numpy(audio_segment)
-
-    if samples is None:
+    except Exception:
         return {"emotion": "neutral", "confidence": 0.0}
-
-    # load cached model
-    model = load_model()
-
-    # predict
-    outputs = model(
-        samples,
-        sampling_rate=TARGET_SAMPLE_RATE
-    )
-
-    if not outputs:
-        return {"emotion": "neutral", "confidence": 0.0}
-
-    best = max(outputs, key=lambda x: x["score"])
-
-    return {
-        "emotion": best["label"],
-        "confidence": round(float(best["score"]), 3)
-    }

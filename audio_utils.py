@@ -1,49 +1,25 @@
-import os
-from pydub import AudioSegment
+import librosa
 
 
-# Force ffmpeg path (Streamlit Cloud compatible)
-AudioSegment.converter = "ffmpeg"
-AudioSegment.ffmpeg = "ffmpeg"
-AudioSegment.ffprobe = "ffprobe"
+def chunk_audio(file_path, chunk_length_ms=10000):
 
+    # Load audio (cloud-safe)
+    y, sr = librosa.load(file_path, sr=16000, mono=True)
 
-MAX_AUDIO_MB = 8   # free tier safety limit
-
-
-def chunk_audio(file_path, chunk_length_ms=4000):
-
-    if not os.path.exists(file_path):
-        raise FileNotFoundError("Audio file not found")
-
-    size_mb = os.path.getsize(file_path) / (1024 * 1024)
-
-    if size_mb > MAX_AUDIO_MB:
-        raise ValueError("Audio file too large (max 8MB allowed)")
-
-    try:
-        audio = AudioSegment.from_file(file_path)
-    except Exception as e:
-        raise RuntimeError(f"Audio decode failed: {e}")
-
-    if len(audio) < 500:
-        raise ValueError("Audio too short")
+    chunk_samples = int(sr * (chunk_length_ms / 1000))
 
     chunks = []
 
-    for i in range(0, len(audio), chunk_length_ms):
+    for i in range(0, len(y), chunk_samples):
 
-        chunk = audio[i:i + chunk_length_ms]
+        chunk = y[i:i + chunk_samples]
 
-        if len(chunk) < 300:
-            continue
+        time_sec = i / sr
 
         chunks.append({
-            "time": round(i / 1000, 2),
-            "chunk": chunk
+            "time": time_sec,
+            "chunk": chunk,
+            "sr": sr
         })
-
-    if not chunks:
-        raise RuntimeError("No valid audio chunks generated")
 
     return chunks
