@@ -165,25 +165,21 @@ if analyze_btn:
             timeline = []
             prev_emotion = None
 
-            for i, c in enumerate(chunks):
-
-                # skip alternate chunks
-                if i % 2 == 1:
-                    continue
+            for c in chunks:
 
                 res = predict_emotion(c["chunk"], c["sr"])
 
+                label = res["emotion"]
+                conf = res["confidence"]
 
-                label = res.get("emotion", "neutral")
-                conf = float(res.get("confidence", 0.0))
-
-                if label != prev_emotion:
+                if not timeline or timeline[-1]["emotion"] != label:
 
                     timeline.append({
                         "time": f"{int(c['time']//60):02d}:{int(c['time']%60):02d}",
                         "emotion": label,
-                        "confidence": round(conf, 3),
+                        "confidence": conf
                     })
+
 
                     prev_emotion = label
 

@@ -1,20 +1,28 @@
 import librosa
+import numpy as np
 
 
-def chunk_audio(file_path, chunk_length_ms=10000):
+def chunk_audio(file_path, chunk_length_ms=4000):
 
-    # Load audio (cloud-safe)
     y, sr = librosa.load(file_path, sr=16000, mono=True)
 
-    chunk_samples = int(sr * (chunk_length_ms / 1000))
+    chunk_size = int(sr * (chunk_length_ms / 1000))
 
     chunks = []
 
-    for i in range(0, len(y), chunk_samples):
+    total_len = len(y)
 
-        chunk = y[i:i + chunk_samples]
+    for start in range(0, total_len, chunk_size):
 
-        time_sec = i / sr
+        end = start + chunk_size
+
+        chunk = y[start:end]
+
+        # Skip very small chunks
+        if len(chunk) < chunk_size * 0.5:
+            continue
+
+        time_sec = round(start / sr, 2)
 
         chunks.append({
             "time": time_sec,
