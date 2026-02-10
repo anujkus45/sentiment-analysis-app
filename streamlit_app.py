@@ -66,12 +66,12 @@ button {
 st.markdown('<div class="main-title">Voice Emotion Dashboard</div>', unsafe_allow_html=True)
 
 st.markdown(
-    '<div class="subtitle">Upload audio, analyze emotion changes, and view results in one place.</div>',
+    '<div class="subtitle">Upload audio, analyze emotion changes, and view results.</div>',
     unsafe_allow_html=True
 )
 
 
-# ================= INPUT CARD =================
+# ================= INPUT =================
 
 st.markdown('<div class="card">', unsafe_allow_html=True)
 
@@ -94,7 +94,7 @@ with col3:
 st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ================= BUTTON CARD =================
+# ================= BUTTONS =================
 
 st.markdown('<div class="card">', unsafe_allow_html=True)
 
@@ -112,7 +112,7 @@ with col3:
 st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ================= CLEAR UPLOADS =================
+# ================= CLEAR =================
 
 if clear_btn:
     for f in os.listdir(UPLOAD_DIR):
@@ -134,7 +134,7 @@ if uploaded:
 
     st.audio(uploaded.getvalue())
 
-    st.success(f"File uploaded: {filename}")
+    st.success(f"Uploaded: {filename}")
 
 
 # ================= ANALYZE =================
@@ -145,17 +145,20 @@ timeline = None
 if analyze_btn:
 
     if not uploaded:
-        st.error("Please upload an audio file first.")
+        st.error("Upload file first")
         st.stop()
 
-    with st.spinner("Analyzing audio... Please wait..."):
+    with st.spinner("Analyzing..."):
 
         start = time.time()
 
         try:
             chunks = chunk_audio(path, chunk_length_ms=chunk_ms)
 
-            # limit duration
+            # DEBUG
+            st.info(f"Total chunks: {len(chunks)}")
+
+            # Limit duration
             max_chunks = int((MAX_SECONDS * 1000) / chunk_ms)
 
             if len(chunks) > max_chunks:
@@ -163,33 +166,29 @@ if analyze_btn:
                 chunks = chunks[:max_chunks]
 
             timeline = []
-            prev_emotion = None
 
             for c in chunks:
 
-                res = predict_emotion(c["chunk"], c["sr"])
+                # FIXED: removed sr
+                res = predict_emotion(c["chunk"])
 
                 label = res["emotion"]
                 conf = res["confidence"]
 
-                if not timeline or timeline[-1]["emotion"] != label:
-
-                    timeline.append({
-                        "time": f"{int(c['time']//60):02d}:{int(c['time']%60):02d}",
-                        "emotion": label,
-                        "confidence": conf
-                    })
-
-
-                    prev_emotion = label
+                # SAVE ALL CHUNKS
+                timeline.append({
+                    "time": f"{int(c['time']//60):02d}:{int(c['time']%60):02d}",
+                    "emotion": label,
+                    "confidence": round(conf, 3)
+                })
 
         except Exception as e:
-            st.error(f"Processing failed: {e}")
+            st.error(f"Failed: {e}")
             st.stop()
 
         end = time.time()
 
-    st.success(f"Analysis completed in {round(end-start,2)} sec")
+    st.success(f"Done in {round(end-start,2)} sec")
 
 
 # ================= RESULTS =================
@@ -204,7 +203,7 @@ if timeline:
     st.markdown('<div class="card">', unsafe_allow_html=True)
 
     st.markdown(
-        '<div class="section-title">Detected Emotion Changes</div>',
+        '<div class="section-title">Detected Emotions</div>',
         unsafe_allow_html=True
     )
 
@@ -218,7 +217,7 @@ if timeline:
     st.markdown('<div class="card">', unsafe_allow_html=True)
 
     st.markdown(
-        '<div class="section-title">Emotion Changes Over Time</div>',
+        '<div class="section-title">Confidence Over Time</div>',
         unsafe_allow_html=True
     )
 
@@ -250,8 +249,8 @@ if timeline:
         json_data = df.to_json(orient="records", indent=2)
 
         st.download_button(
-            label="Download Results",
-            data=json_data,
-            file_name="emotion_results.json",
-            mime="application/json"
+            "Download Results",
+            json_data,
+            "emotion_results.json",
+            "application/json"
         )
