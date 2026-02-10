@@ -1,6 +1,6 @@
 streamlit
 pandas
 numpy<2
-pydub
+pydub==0.25.1
 transformers
-torch
+torch==2.0.1+cpu
